@@ -231,9 +231,10 @@ class Viewer(pyglet.window.Window):
         pyglet.resource.path = ['resources']
         pyglet.resource.reindex()
         charging = pyglet.resource.image('charging.png')
+        uav = pyglet.resource.image('uav.png')
         user = pyglet.resource.image('user.png')
         radiation = pyglet.resource.image('radiation.png')
-        super(Viewer, self).__init__(width=x, height=y, resizable=False, caption='MADDPG', vsync=False)
+        super(Viewer, self).__init__(width=x, height=y, resizable=False, caption='Multi-Agent', vsync=False)
         pyglet.gl.glClearColor(1, 1, 1, 1)
         self.batch = pyglet.graphics.Batch()  # display whole batch at once
         self.chargings = []
@@ -241,8 +242,8 @@ class Viewer(pyglet.window.Window):
         self.charging_goals = []
         for u in self.charging_infos:
             charging_sprite = pyglet.sprite.Sprite(img=charging, x=u['position_x'] - 17., y=u['position_y'] - 10.)
-            radiation_sprite = pyglet.sprite.Sprite(img=radiation, x=u['position_x'] - 100.,
-                                                    y=u['position_y'] - 100.)
+            radiation_sprite = pyglet.sprite.Sprite(img=radiation, x=u['position_x'] - 100., y=u['position_y'] - 100.)
+            uav_sprite = pyglet.sprite.Sprite(img=uav, x=u['position_x'] - 100., y=u['position_y'] - 100.)
             self.chargings.append(charging_sprite)
             self.chargings_radiation.append(radiation_sprite)
         for u in self.charging_goal_infos:
