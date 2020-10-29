@@ -20,9 +20,11 @@ class Env(object):
     goal_speed_y_bound = [-0.2, 0.2]
 
     def __init__(self, uav_num, charging_num, user_goal_num):
-        self.uav_infos = np.zeros(uav_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32)])
+        self.uav_infos = np.zeros(uav_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32), ('energy', np.float32)])
         self.charging_infos = np.zeros(charging_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
+        self.uav_working = []
+        self.uav_waiting = []
 
     def reset(self):
         obslist = []
@@ -110,7 +112,6 @@ class Env(object):
             obslist.append(uav_speed_y_)
             obslist.append(uav_acceleration_x)
             obslist.append(uav_acceleration_y)
-        temp = 0
         j = 0
         for g in self.user_goal_infos:
             goal_acceleration_x = np.random.uniform(np.min(self.goal_acceleration_x_bound), np.max(self.goal_acceleration_x_bound))
