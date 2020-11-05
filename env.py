@@ -231,4 +231,4 @@ if __name__ == '__main__':
     env.reset()
     while True:
         env.render()
-        env.step([0.1,0.1,0.1,0.1])
+        env.step([0.1,0.1,0.1,0.1]) #环境配置OK
