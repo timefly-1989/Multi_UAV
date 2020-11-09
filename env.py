@@ -19,47 +19,47 @@ class Env(object):
     goal_speed_x_bound = [-0.2, 0.2]
     goal_speed_y_bound = [-0.2, 0.2]
 
-    def __init__(self, uav_num, charging_num, user_goal_num):
-        self.uav_infos = np.zeros(uav_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32), ('energy', np.float32)])
+    def __init__(self, uav_num_working, uav_num_waiting, charging_num, user_goal_num):
+        self.uav_num = uav_num_working + uav_num_waiting
+        self.uav_infos = np.zeros(self.uav_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32), ('energy', np.float32)])
         self.charging_infos = np.zeros(charging_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.uav_working = []
         self.uav_waiting = []
+        self.uav_num_working = uav_num_working
+        self.uav_num_waiting = uav_num_waiting
 
     def reset(self):
         obslist = []
         id = 1
+        id_c = 0
         for u in self.uav_infos:
-            u['speed_x'] = 0.
-            u['speed_y'] = 0.
-            u['acceleration_x'] = 0.
-            u['acceleration_y'] = 0.
-            u['position_x'] = np.random.uniform(0, self.region_x)
-            u['position_y'] = np.random.uniform(0, self.region_y)
-            u['ID'] = id
-            id = id+1
-            obslist.append(u['position_x'])
-            obslist.append(u['position_y'])
-            obslist.append(u['speed_x'])
-            obslist.append(u['speed_y'])
-            obslist.append(u['acceleration_x'])
-            obslist.append(u['acceleration_y'])
-        id = 1
-        for c in self.charging_infos:
-            c['speed_x'] = 0.
-            c['speed_y'] = 0.
-            c['acceleration_x'] = 0.
-            c['acceleration_y'] = 0.
-            c['position_x'] = np.random.uniform(0, self.region_x)
-            c['position_y'] = np.random.uniform(0, self.region_y)
-            c['ID'] = id
-            id = id+1
-            obslist.append(c['position_x'])
-            obslist.append(c['position_y'])
-            obslist.append(c['speed_x'])
-            obslist.append(c['speed_y'])
-            obslist.append(c['acceleration_x'])
-            obslist.append(c['acceleration_y'])
+            if id < (self.uav_num_working + 1):
+                u['speed_x'] = 0.
+                u['speed_y'] = 0.
+                u['acceleration_x'] = 0.
+                u['acceleration_y'] = 0.
+                u['position_x'] = np.random.uniform(0, self.region_x)
+                u['position_y'] = np.random.uniform(0, self.region_y)
+                u['ID'] = 1
+                id = id+1
+            else:
+                u['speed_x'] = 0.
+                u['speed_y'] = 0.
+                u['acceleration_x'] = 0.
+                u['acceleration_y'] = 0.
+                u['position_x'] = np.random.uniform(0, self.region_x)
+                u['position_y'] = np.random.uniform(0, self.region_y)
+                u['ID'] = 0
+                id = id+1
+                self.charging_infos[id_c]['speed_x'] = 0.
+                self.charging_infos[id_c]['speed_y'] = 0.
+                self.charging_infos[id_c]['acceleration_x'] = 0.
+                self.charging_infos[id_c]['acceleration_y'] = 0.
+                self.charging_infos[id_c]['position_x'] = u['position_x']
+                self.charging_infos[id_c]['position_y'] = u['position_y']
+                self.charging_infos[id_c]['ID'] = id_c
+                id_c = id_c +1
         id = 1
         for g in self.user_goal_infos:
             g['speed_x'] = 0.
@@ -68,11 +68,6 @@ class Env(object):
             g['position_y'] = np.random.uniform(0, self.region_y)
             g['ID'] = id
             id = id+1
-            for c in self.charging_infos:
-                obslist.append(c['position_x'] - g['position_x'])
-                obslist.append(c['position_y'] - g['position_y'])
-                obslist.append(g['speed_x'])
-                obslist.append(g['speed_y'])
         return obslist
 
     def step(self, actions):
@@ -106,12 +101,6 @@ class Env(object):
             self.uav_infos[i]['speed_y'] = uav_speed_y_
             self.uav_infos[i]['position_x'] = uav_position_x_
             self.uav_infos[i]['position_y'] = uav_position_y_
-            obslist.append(uav_position_x_)
-            obslist.append(uav_position_y_)
-            obslist.append(uav_speed_x_)
-            obslist.append(uav_speed_y_)
-            obslist.append(uav_acceleration_x)
-            obslist.append(uav_acceleration_y)
         j = 0
         for g in self.user_goal_infos:
             goal_acceleration_x = np.random.uniform(np.min(self.goal_acceleration_x_bound), np.max(self.goal_acceleration_x_bound))
@@ -149,10 +138,6 @@ class Env(object):
 
             i = 0
             for c in self.uav_infos:
-                obslist.append(c['position_x'] - g['position_x'])
-                obslist.append(c['position_y'] - g['position_y'])
-                obslist.append(g['speed_x'])
-                obslist.append(g['speed_y'])
                 d = np.sqrt((c['position_x'] - g['position_x']) ** 2 + (c['position_y'] - g['position_y']) ** 2)
                 i = i+1
             j = j+1
@@ -218,16 +203,16 @@ class Viewer(pyglet.window.Window):
             user_goal.draw()
 
     def _update_charging(self):
-        for i in range(np.size(self.uav_infos)):
-            self.uavs[i].update(x=(self.uav_infos[i])['position_x'] - 17., y=(self.charging_infos[i])['position_y'] - 10.)
-            self.uavs_radiation[i].update(x=(self.uav_infos[i])['position_x'] - 100., y=(self.uav_infos[i])['position_y'] - 100.)
         for i in range(np.size(self.charging_infos)):
             self.chargings[i].update(x=(self.charging_infos[i])['position_x'] - 20., y=(self.charging_infos[i])['position_y'] - 13.)
+        for i in range(np.size(self.uav_infos)):
+            self.uavs[i].update(x=(self.uav_infos[i])['position_x'] - 17., y=(self.uav_infos[i])['position_y'] - 10.)
+            self.uavs_radiation[i].update(x=(self.uav_infos[i])['position_x'] - 100., y=(self.uav_infos[i])['position_y'] - 100.)
         for i in range(np.size(self.user_goal_infos)):
             self.user_goals[i].update(x=(self.user_goal_infos[i])['position_x'] - 7., y=(self.user_goal_infos[i])['position_y'] - 7.)
 
 if __name__ == '__main__':
-    env = Env(2, 3, 4)
+    env = Env(2, 2, 2, 4)
     env.reset()
     while True:
         env.render()
