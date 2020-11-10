@@ -10,37 +10,26 @@ MAX_EPISODES = 20000
 MAX_EP_STEPS = 200
 MEMORY_CAPACITY = 10000
 
-uav_num_working = 2
-charging_num = 2
-uav_num_waiting = charging_num
-user_goal_num = 2
-uav_num = uav_num_working+uav_num_waiting
-
-n_states = (uav_num+charging_num) *6 + uav_num*ch
-n_actions
-n_agents
-
-env = Env(uav_num_working, uav_num_waiting, charging_num, user_goal_num)
-bicnet = BiCNet()
-print(bicnet)
-bicnet.load_model()
-
 def train(args):
+    uav_num_working = 2
+    charging_num = 2
+    uav_num_waiting = charging_num
+    user_goal_num = 2
+    uav_num = uav_num_working+uav_num_waiting
+
+    n_states = 7
+    n_actions = 2
+    n_agents = uav_num
+
+    env = Env(uav_num_working, uav_num_waiting, charging_num, user_goal_num)
+    bicnet = BiCNet(n_states, n_actions, n_agents, args)
+    bicnet.load_model()
+
     var = 3  # control exploration
     for i in range(MAX_EPISODES):
         obs = env.reset()
-#        total_reward = 0.0
-#        for j in range(MAX_EP_STEPS):
-#            env.render()
-#            action = ddpg.choose_action(obs)
-#            obs_, reward, done = env.step(action.numpy())
-#            ddpg.store_transition(obs, action, reward, obs_)
-#            if ddpg.pointer > MEMORY_CAPACITY:
-#                var *= .9995    # decay the action randomness
-#                ddpg.learn()
-#            obs = obs_
-#            total_reward += reward
-#        print('Episode: %d, reward = %f' % (i, total_reward))
+        print(bicnet.choose_action(obs, noisy=True))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

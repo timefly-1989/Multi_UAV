@@ -3,6 +3,7 @@ import pyglet
 import math
 import matplotlib.pyplot as plt
 from scipy.optimize import linear_sum_assignment
+from array import array
 
 class Env(object):
     viewer = None
@@ -60,6 +61,7 @@ class Env(object):
                 self.charging_infos[id_c]['position_y'] = u['position_y']
                 self.charging_infos[id_c]['ID'] = id_c
                 id_c = id_c +1
+            obslist.append(np.array([u['speed_x'], u['speed_y'], u['acceleration_x'], u['acceleration_y'], u['position_x'], u['position_y'], u['ID']]))
         id = 1
         for g in self.user_goal_infos:
             g['speed_x'] = 0.
@@ -101,6 +103,7 @@ class Env(object):
             self.uav_infos[i]['speed_y'] = uav_speed_y_
             self.uav_infos[i]['position_x'] = uav_position_x_
             self.uav_infos[i]['position_y'] = uav_position_y_
+            obslist.append(np.array([uav_speed_x_, uav_speed_y_, uav_acceleration_x, uav_acceleration_y, uav_position_x_, uav_position_y_, 1]))
         j = 0
         for g in self.user_goal_infos:
             goal_acceleration_x = np.random.uniform(np.min(self.goal_acceleration_x_bound), np.max(self.goal_acceleration_x_bound))
@@ -213,7 +216,8 @@ class Viewer(pyglet.window.Window):
 
 if __name__ == '__main__':
     env = Env(2, 2, 2, 4)
-    env.reset()
+    obslist = env.reset()
+    print(obslist)
     while True:
         env.render()
         env.step([0.1,0.1,0.1,0.1]) #环境配置OK
