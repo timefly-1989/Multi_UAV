@@ -1,2 +1,5 @@
 {
+    "python.pythonPath": "C:\\Users\\liush\\.conda\\envs\\pytorch_1_0\\python.exe",
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }

@@ -1,14 +1,9 @@
 import sys
-sys.path.append(".")
 from env import Env
 import numpy as np
-import torch as th
+import torch
 from bicnet import BiCNet
 import argparse, datetime
-
-MAX_EPISODES = 20000
-MAX_EP_STEPS = 200
-MEMORY_CAPACITY = 10000
 
 def train(args):
     uav_num_working = 2
@@ -17,23 +12,42 @@ def train(args):
     user_goal_num = 2
     uav_num = uav_num_working+uav_num_waiting
 
-    n_states = 7
-    n_actions = 2
-    n_agents = uav_num
+    state_dim = 7
+    action_dim = 2
+    torch.manual_seed(args.seed)
 
     env = Env(uav_num_working, uav_num_waiting, charging_num, user_goal_num)
-    bicnet = BiCNet(n_states, n_actions, n_agents, args)
+    bicnet = BiCNet(state_dim, action_dim, uav_num, args)
     bicnet.load_model()
-
-    var = 3  # control exploration
-    for i in range(MAX_EPISODES):
-        obs = env.reset()
-        print(bicnet.choose_action(obs, noisy=True))
-
-
+    episode = 0
+    total_step = 0
+    while episode < args.max_episodes:
+        state = env.reset()
+        episode += 1
+        step = 0
+        accum_reward = 0
+        while True:
+            action = bicnet.choose_action(state, noisy=True)
+            next_state, reward, done = env.step(action)
+            env.render()
+            step += 1
+            total_step += 1
+            reward = np.array(reward)
+            bicnet.memory(state, action, reward, next_state, done)
+            state = next_state
+            if args.episode_length < step or (True in done):
+                c_loss, a_loss = bicnet.update(episode)
+                print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
+                if c_loss and a_loss:
+                    print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
+                if episode % args.save_interval == 0:
+                    bicnet.save_model(episode)
+                break
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--max_episodes', default=1e10, type=int)
+    parser.add_argument('--mode', default="eval", type=str, help="train/eval")
     parser.add_argument('--episode_length', default=50, type=int)
     parser.add_argument('--memory_length', default=int(1e5), type=int)
     parser.add_argument('--tau', default=0.001, type=float)

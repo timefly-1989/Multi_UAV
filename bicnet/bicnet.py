@@ -42,8 +42,8 @@ class BiCNet():
         self.var = [1.0 for i in range(n_agents)]
 
     def load_model(self):
-        model_actor_path = "./trained_model/" + "/actor_" + str(self.config.model_episode) + ".pth"
-        model_critic_path = "./trained_model/" + "/critic_" + str(self.config.model_episode) + ".pth"
+        model_actor_path = "./trained_model/" + "actor_" + str(self.config.model_episode) + ".pth"
+        model_critic_path = "./trained_model/" + "critic_" + str(self.config.model_episode) + ".pth"
         if os.path.exists(model_critic_path) and os.path.exists(model_actor_path):
             print("load model!")
             actor = torch.load(model_actor_path)
@@ -52,12 +52,12 @@ class BiCNet():
             self.critic.load_state_dict(critic)
 
     def save_model(self, episode):
-        if not os.path.exists("./trained_model/"  + "/"):
-            os.mkdir("./trained_model/" + "/")
+        if not os.path.exists("./trained_model/"):
+            os.mkdir("./trained_model/")
         torch.save(self.actor.state_dict(),
-                   "./trained_model/" + "/actor_" + str(episode) + ".pth"),
+                   "./trained_model/" + "actor_" + str(episode) + ".pth"),
         torch.save(self.critic.state_dict(),
-                   "./trained_model/" + "/critic_" + str(episode) + ".pth"),
+                   "./trained_model/" + "critic_" + str(episode) + ".pth"),
 
 
     def choose_action(self, obs, noisy=True):
