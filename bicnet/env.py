@@ -24,7 +24,7 @@ class Env(object):
 
     def __init__(self, uav_num_working, uav_num_waiting, charging_num, user_goal_num):
         self.uav_num = uav_num_working + uav_num_waiting
-        self.uav_infos = np.zeros(self.uav_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32), ('energy', np.float32)])
+        self.uav_infos = np.zeros(self.uav_num, dtype=[('energy', np.float32), ('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32), ('energy', np.float32)])
         self.charging_infos = np.zeros(charging_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32), ('acceleration_x', np.float32), ('acceleration_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('ID', np.int), ('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.uav_working = []
@@ -45,6 +45,7 @@ class Env(object):
                 u['position_x'] = np.random.uniform(0, self.region_x)
                 u['position_y'] = np.random.uniform(0, self.region_y)
                 u['ID'] = 1
+                u['energy'] = np.random.uniform(80,100)
                 id = id+1
             else:
                 u['speed_x'] = 0.
@@ -53,6 +54,7 @@ class Env(object):
                 u['acceleration_y'] = 0.
                 u['position_x'] = np.random.uniform(0, self.region_x)
                 u['position_y'] = np.random.uniform(0, self.region_y)
+                u['energy'] = 200.
                 u['ID'] = 0
                 id = id+1
                 self.charging_infos[id_c]['speed_x'] = 0.
@@ -63,7 +65,7 @@ class Env(object):
                 self.charging_infos[id_c]['position_y'] = u['position_y']
                 self.charging_infos[id_c]['ID'] = id_c
                 id_c = id_c +1
-            obslist.append(np.array([u['speed_x'], u['speed_y'], u['acceleration_x'], u['acceleration_y'], u['position_x'], u['position_y'], u['ID']]))
+            obslist.append(np.array([u['speed_x'], u['speed_y'], u['acceleration_x'], u['acceleration_y'], u['position_x'], u['position_y'], u['energy'], u['ID']]))
         id = 1
         for g in self.user_goal_infos:
             g['speed_x'] = 0.
