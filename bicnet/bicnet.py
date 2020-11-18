@@ -68,7 +68,7 @@ class BiCNet():
 
         if noisy:
             for agent_idx in range(self.n_agents):
-                action[agent_idx] += np.random.randn(2) * self.var[agent_idx]
+                action[agent_idx] += np.random.randn(3) * self.var[agent_idx]
 
                 if self.var[agent_idx] > 0.05:
                     self.var[agent_idx] *= 0.999998
