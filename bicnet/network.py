@@ -4,7 +4,7 @@ import torch.nn as nn
 from utils import weight_init
 from utils import fanin_init
 
-HIDDEN_DIM = 50
+HIDDEN_DIM = 400
 
 
 class Actor(nn.Module):

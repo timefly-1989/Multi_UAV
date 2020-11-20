@@ -1,9 +1,9 @@
+import matplotlib.pyplot as plt
 import sys
 sys.path.append(".")
 import numpy as np
 import pyglet
 import math
-import matplotlib.pyplot as plt
 from scipy.optimize import linear_sum_assignment
 from array import array
 import random
@@ -35,7 +35,7 @@ class Env(object):
         self.charging_infos = np.zeros(charging_num, dtype=[('position_x', np.float32), ('position_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.wireless_working_num = wireless_working_num
-        self.out_of_power = -100
+        self.out_of_power = -1000
         self.game_over = 0
     
     def obslist_i(self, i):
@@ -103,15 +103,15 @@ class Env(object):
                 reward.append(self.out_of_power)
                 done.append(True)
             return obslist, reward, done
-
+        
+        goal_x = self.user_goal_infos[0]['position_x']
+        goal_y = self.user_goal_infos[0]['position_y']
         for i in range (len(actions)):
             if self.pre_action[i][2] == 1:
-                goal_x = self.user_goal_infos[0]['position_x']
-                goal_y = self.user_goal_infos[0]['position_y']
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2 + (self.uav_infos[i]['position_y'] -goal_y)**2)
-                reward.append(pre_d-d)
+                reward.append((pre_d-d)*20)
                 done.append(False)
 
                 if actions[i][2]>=0:    #1->1
@@ -126,17 +126,17 @@ class Env(object):
                 if actions[i][2]>=0:    #2->2
                     self.uav_infos[i]['working_state'] = 2
                     if len(self.pre_request_service)>0:
-                        reward.append(-1)
+                        reward.append(0)
                     else:
                         reward.append(0)
                 else:   #2->4
                     if len(self.pre_request_service)>0:
                         self.uav_infos[i]['working_state'] = 4
-                        reward.append(1)
+                        reward.append(0)
                         request_service = []
                     else:
                         self.uav_infos[i]['working_state'] = 2
-                        reward.append(-1)
+                        reward.append(-100)
 
             elif self.pre_action[i][2] == 3:
                 done.append(False)
@@ -144,13 +144,13 @@ class Env(object):
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
                 if actions[i][2]>=0:    #3->3
-                    reward.append(pre_d-d)
+                    reward.append((pre_d-d)*20)
                 else:   #3->2
                     if d<5:
-                        reward.append(10)
+                        reward.append(1000)
                         self.uav_infos[i]['working_state'] = 2
                     else:
-                        reward.append(-10)
+                        reward.append(-100)
                         self.uav_infos[i]['working_state'] = 3
 
             elif self.pre_action[i][2] == 4:
@@ -159,15 +159,15 @@ class Env(object):
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])**2+(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])**2)
                 if actions[i][2]>=0:    #4->4
-                    reward.append(pre_d-d)
+                    reward.append((pre_d-d)*20)
                     self.uav_infos[i]['working_state'] = 4
                 else: #4->1
                     if d < 5:
-                        reward.append(10)
+                        reward.append(1000)
                         self.uav_infos[i]['working_state'] = 1
                         self.pre_ask_return.append(i)
                     else: 
-                        reward.append(-10)
+                        reward.append(-100)
                         self.uav_infos[i]['working_state'] = 4
             elif self.pre_action[i][2] == 5:
                 done.append(False)
@@ -178,20 +178,21 @@ class Env(object):
                     self.uav_infos[i]['working_state'] = 5
                     request_service.append(i)
                     if len(self.pre_ask_return)>0:
-                        reward.append(-10)
+                        reward.append(-100)
                     else:
-                        reward.append(pre_d-d)
+                        reward.append((pre_d-d)*20)
                 else:   #5->3
                     if len(self.pre_ask_return)>0:
-                        reward.append(10)
+                        reward.append(100)
                         self.uav_infos[i]['working_state'] = 3
                         self.pre_ask_return = []
                     else:
-                        reward.append(-10)
+                        reward.append(-100)
                         self.uav_infos[i]['working_state'] = 5
             
             next_actions.append([self.uav_infos[i]['acceleration_x'], self.uav_infos[i]['acceleration_y'], self.uav_infos[i]['working_state']])
-            
+        
+        self.pre_action = next_actions   
         self.pre_request_service = request_service
         for i in range (len(actions)):
             obslist.append(self.obslist_i(i))
