@@ -49,7 +49,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--max_episodes', default=1e10, type=int)
     parser.add_argument('--mode', default="eval", type=str, help="train/eval")
-    parser.add_argument('--episode_length', default=200, type=int)
+    parser.add_argument('--episode_length', default=500, type=int)
     parser.add_argument('--memory_length', default=int(1e5), type=int)
     parser.add_argument('--tau', default=0.001, type=float)
     parser.add_argument('--gamma', default=0.95, type=float)

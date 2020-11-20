@@ -7,6 +7,7 @@ import math
 from scipy.optimize import linear_sum_assignment
 from array import array
 import random
+import energy
 
 class Env(object):
     viewer = None
@@ -36,7 +37,6 @@ class Env(object):
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.wireless_working_num = wireless_working_num
         self.out_of_power = -1000
-        self.game_over = 0
     
     def obslist_i(self, i):
         return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],self.uav_infos[i]['position_x'],self.uav_infos[i]['position_y'],self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'],self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'],self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'],self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'],self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']])
@@ -50,7 +50,6 @@ class Env(object):
         self.pre_request_service = []
         self.pre_ask_return = []
 
-
         for u in range(np.size(self.uav_infos)):
             if u < self.wireless_working_num:
                 self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
@@ -60,7 +59,7 @@ class Env(object):
                 self.uav_infos[uav_sequence[u]]['position_x'] = np.random.uniform(0, self.region_x)
                 self.uav_infos[uav_sequence[u]]['position_y'] = np.random.uniform(0, self.region_y)
                 self.uav_infos[uav_sequence[u]]['working_state'] = 1
-                self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(50,100)
+                self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(60,100)
             else:
                 self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
                 self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
@@ -85,6 +84,7 @@ class Env(object):
 
     def step(self, actions):
         self.goal_new_state()
+        game_over = 0
         done = []
         reward = []
         obslist = []
@@ -92,12 +92,16 @@ class Env(object):
         request_service = []
         actions = actions.reshape((int(actions.size/3), 3))
 
+        for i in range(np.size(self.uav_infos)):
+            if self.uav_infos[i]['working_state'] == 1 or 3 or 4 or 5:
+                self.uav_infos[i]['energy'] = self.uav_infos[i]['energy'] - energy.energy_consumption(np.sqrt(self.uav_infos[i]['speed_x']**2+self.uav_infos[i]['speed_y']**2))
+
         #能量耗尽，system崩溃结束。
         for i in range(len(actions)):
             if self.uav_infos[i]['energy']<=0:
-                self.game_over = 1
+                game_over = 1
                 break 
-        if self.game_over == 1:
+        if game_over == 1:
             for i in range(np.size(self.uav_infos)):
                 obslist.append(self.obslist_i(i))
                 reward.append(self.out_of_power)
@@ -149,6 +153,11 @@ class Env(object):
                     if d<5:
                         reward.append(1000)
                         self.uav_infos[i]['working_state'] = 2
+                        if self.uav_infos[i]['energy']>5:
+                            reward.append(-1000)
+                        else:
+                            reward.append(100*5/self.uav_infos[i]['energy'])
+                        self.uav_infos[i]['energy'] = 100
                     else:
                         reward.append(-100)
                         self.uav_infos[i]['working_state'] = 3
