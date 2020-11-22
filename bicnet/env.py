@@ -36,7 +36,8 @@ class Env(object):
         self.charging_infos = np.zeros(charging_num, dtype=[('position_x', np.float32), ('position_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.wireless_working_num = wireless_working_num
-        self.out_of_power = -1000
+        self.out_of_power = -10000
+        self.max_energy_util = 0.001
     
     def obslist_i(self, i):
         return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],self.uav_infos[i]['position_x'],self.uav_infos[i]['position_y'],self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'],self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'],self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'],self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'],self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']])
@@ -59,7 +60,7 @@ class Env(object):
                 self.uav_infos[uav_sequence[u]]['position_x'] = np.random.uniform(0, self.region_x)
                 self.uav_infos[uav_sequence[u]]['position_y'] = np.random.uniform(0, self.region_y)
                 self.uav_infos[uav_sequence[u]]['working_state'] = 1
-                self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(60,100)
+                self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(150,500)
             else:
                 self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
                 self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
@@ -68,7 +69,7 @@ class Env(object):
                 self.uav_infos[uav_sequence[u]]['position_x'] = self.charging_infos[id_c]['position_x'] = np.random.uniform(0, self.region_x)
                 self.uav_infos[uav_sequence[u]]['position_y'] = self.charging_infos[id_c]['position_y'] = np.random.uniform(0, self.region_y)
                 self.uav_infos[uav_sequence[u]]['working_state'] = 2
-                self.uav_infos[uav_sequence[u]]['energy'] = 100
+                self.uav_infos[uav_sequence[u]]['energy'] = 1000
                 id_c = id_c +1
 
         for g in self.user_goal_infos:
@@ -94,7 +95,12 @@ class Env(object):
 
         for i in range(np.size(self.uav_infos)):
             if self.uav_infos[i]['working_state'] == 1 or 3 or 4 or 5:
-                self.uav_infos[i]['energy'] = self.uav_infos[i]['energy'] - energy.energy_consumption(np.sqrt(self.uav_infos[i]['speed_x']**2+self.uav_infos[i]['speed_y']**2))
+                v = np.sqrt(self.uav_infos[i]['speed_x']**2+self.uav_infos[i]['speed_y']**2)
+                energy_c = energy.energy_consumption(v)
+                self.uav_infos[i]['energy'] = self.uav_infos[i]['energy'] - energy_c
+                e = energy.energy_distance_estimation(v, self.dt, energy_c)
+                if e>self.max_energy_util:
+                    self.max_energy_util = e
 
         #能量耗尽，system崩溃结束。
         for i in range(len(actions)):
@@ -115,12 +121,17 @@ class Env(object):
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2 + (self.uav_infos[i]['position_y'] -goal_y)**2)
-                reward.append((pre_d-d)*20)
+                d_charging = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2 + (self.uav_infos[i]['position_y'] -self.charging_infos[0]['position_y'])**2)
+                min_energy = 2*d_charging/self.max_energy_util
                 done.append(False)
-
                 if actions[i][2]>=0:    #1->1
+                    if min_energy<self.uav_infos[i]['energy']:
+                        reward.append((pre_d-d)*100+(self.uav_infos[i]['energy']-min_energy)*10)
+                    else:
+                        reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-min_energy)*100)
                     self.uav_infos[i]['working_state'] = 1
                 else:   #1->5
+                    reward.append((pre_d-d)*100-(self.uav_infos[i]['energy']-10-min_energy)*100)
                     self.uav_infos[i]['working_state'] = 5
                     request_service.append(i)
                 
@@ -130,36 +141,35 @@ class Env(object):
                 if actions[i][2]>=0:    #2->2
                     self.uav_infos[i]['working_state'] = 2
                     if len(self.pre_request_service)>0:
-                        reward.append(0)
+                        reward.append(-50)
                     else:
-                        reward.append(0)
+                        reward.append(50)
                 else:   #2->4
                     if len(self.pre_request_service)>0:
                         self.uav_infos[i]['working_state'] = 4
-                        reward.append(0)
+                        reward.append(100)
                         request_service = []
                     else:
                         self.uav_infos[i]['working_state'] = 2
-                        reward.append(-100)
+                        reward.append(-1000)
 
             elif self.pre_action[i][2] == 3:
                 done.append(False)
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
+                d_charging = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2 + (self.uav_infos[i]['position_y'] -self.charging_infos[0]['position_y'])**2)
+                min_energy = d_charging/self.max_energy_util
                 if actions[i][2]>=0:    #3->3
-                    reward.append((pre_d-d)*20)
+                    reward.append((pre_d-d)*100+(self.uav_infos[i]['energy']-min_energy)*10)
                 else:   #3->2
-                    if d<5:
-                        reward.append(1000)
+                    if d<6:
                         self.uav_infos[i]['working_state'] = 2
-                        if self.uav_infos[i]['energy']>5:
-                            reward.append(-1000)
-                        else:
-                            reward.append(100*5/self.uav_infos[i]['energy'])
-                        self.uav_infos[i]['energy'] = 100
+                        if self.uav_infos[i]['energy']>10:
+                            reward.append((10-self.uav_infos[i]['energy'])*5000)
+                        self.uav_infos[i]['energy'] = 1000
                     else:
-                        reward.append(-100)
+                        reward.append(-1000)
                         self.uav_infos[i]['working_state'] = 3
 
             elif self.pre_action[i][2] == 4:
@@ -168,15 +178,15 @@ class Env(object):
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])**2+(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])**2)
                 if actions[i][2]>=0:    #4->4
-                    reward.append((pre_d-d)*20)
+                    reward.append((pre_d-d)*100)
                     self.uav_infos[i]['working_state'] = 4
                 else: #4->1
-                    if d < 5:
-                        reward.append(1000)
+                    if d < 10:
+                        reward.append(5000)
                         self.uav_infos[i]['working_state'] = 1
                         self.pre_ask_return.append(i)
                     else: 
-                        reward.append(-100)
+                        reward.append(-1000)
                         self.uav_infos[i]['working_state'] = 4
             elif self.pre_action[i][2] == 5:
                 done.append(False)
@@ -187,16 +197,16 @@ class Env(object):
                     self.uav_infos[i]['working_state'] = 5
                     request_service.append(i)
                     if len(self.pre_ask_return)>0:
-                        reward.append(-100)
+                        reward.append(-1000)
                     else:
-                        reward.append((pre_d-d)*20)
+                        reward.append((pre_d-d)*100)
                 else:   #5->3
                     if len(self.pre_ask_return)>0:
-                        reward.append(100)
+                        reward.append(2000)
                         self.uav_infos[i]['working_state'] = 3
                         self.pre_ask_return = []
                     else:
-                        reward.append(-100)
+                        reward.append(-2000)
                         self.uav_infos[i]['working_state'] = 5
             
             next_actions.append([self.uav_infos[i]['acceleration_x'], self.uav_infos[i]['acceleration_y'], self.uav_infos[i]['working_state']])
