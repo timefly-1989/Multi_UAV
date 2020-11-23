@@ -36,7 +36,7 @@ class Env(object):
         self.charging_infos = np.zeros(charging_num, dtype=[('position_x', np.float32), ('position_y', np.float32)])
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.wireless_working_num = wireless_working_num
-        self.out_of_power = -10000
+        self.out_of_power = -1000
         self.max_energy_util = 0.001
     
     def obslist_i(self, i):
@@ -129,9 +129,9 @@ class Env(object):
                         if min_energy+20<self.uav_infos[i]['energy']:
                             reward.append((pre_d-d)*100)
                         else:
-                            reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*10)
+                            reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*100)
                     else:
-                        reward.append((pre_d-d)*+(self.uav_infos[i]['energy']-min_energy)*100)
+                        reward.append((pre_d-d)+(self.uav_infos[i]['energy']-min_energy)*5)
                     self.uav_infos[i]['working_state'] = 1
                 else:   #1->5
                     if min_energy+200<self.uav_infos[i]['energy']:

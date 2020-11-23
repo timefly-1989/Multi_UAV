@@ -77,14 +77,17 @@ class DenseNet(nn.Module):
             self.norm2 = nn.BatchNorm1d(hidden_dim)
             self.norm3 = nn.BatchNorm1d(hidden_dim)
             self.norm4 = nn.BatchNorm1d(hidden_dim)
+            self.norm5 = nn.BatchNorm1d(hidden_dim)
 
         self.dense1 = nn.Linear(s_dim, hidden_dim)
         self.dense1.weight.data = fanin_init(self.dense1.weight.data.size())
         self.dense2 = nn.Linear(hidden_dim, hidden_dim)
         self.dense2.weight.data = fanin_init(self.dense2.weight.data.size())
         self.dense3 = nn.Linear(hidden_dim, hidden_dim)
-        self.dense3.weight.data.uniform_(-0.003, 0.003)
-        self.dense4 = nn.Linear(hidden_dim, a_dim)
+        self.dense3.weight.data = fanin_init(self.dense3.weight.data.size())
+        self.dense4 = nn.Linear(hidden_dim, hidden_dim)
+        self.dense4.weight.data.uniform_(-0.003, 0.003)
+        self.dense5 = nn.Linear(hidden_dim, a_dim)
 
         if hidden_activation:
             self.hidden_activation = hidden_activation()
@@ -106,7 +109,9 @@ class DenseNet(nn.Module):
         if use_norm: x = self.norm3(x)
         x = self.hidden_activation(self.dense3(x))
         if use_norm: x = self.norm4(x)
-        x = self.output_activation(self.dense4(x))
+        x = self.hidden_activation(self.dense4(x))
+        if use_norm: x = self.norm5(x)
+        x = self.output_activation(self.dense5(x))
         return x
 
 
