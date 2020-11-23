@@ -127,16 +127,23 @@ class Env(object):
                 if actions[i][2]>=0:    #1->1
                     if min_energy<self.uav_infos[i]['energy']:
                         if min_energy+20<self.uav_infos[i]['energy']:
-                            reward.append((pre_d-d)*500+(self.uav_infos[i]['energy']-20-min_energy)*0.1)
+                            reward.append((pre_d-d)*100)
                         else:
                             reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*10)
                     else:
                         reward.append((pre_d-d)*+(self.uav_infos[i]['energy']-min_energy)*100)
                     self.uav_infos[i]['working_state'] = 1
                 else:   #1->5
-                    reward.append((pre_d-d)*10-(self.uav_infos[i]['energy']-20-min_energy)*100)
-                    self.uav_infos[i]['working_state'] = 5
-                    request_service.append(i)
+                    if min_energy+200<self.uav_infos[i]['energy']:
+                        reward.append(-100)
+                        self.uav_infos[i]['working_state'] = 1
+                    else:
+                        if min_energy+40<self.uav_infos[i]['energy']:
+                            reward.append((pre_d-d)*10-0.1*(self.uav_infos[i]['energy']-40-min_energy))
+                        else:
+                            reward.append((pre_d-d)*10-(self.uav_infos[i]['energy']-40-min_energy))
+                        self.uav_infos[i]['working_state'] = 5
+                        request_service.append(i)
                 
             elif self.pre_action[i][2] == 2:
                 self.uav_new_position(actions, i)
@@ -144,27 +151,29 @@ class Env(object):
                 if actions[i][2]>=0:    #2->2
                     self.uav_infos[i]['working_state'] = 2
                     if len(self.pre_request_service)>0:
-                        reward.append(-100)
+                        reward.append(-20)
                     else:
-                        reward.append(100)
+                        reward.append(20)
                 else:   #2->4
                     if len(self.pre_request_service)>0:
                         self.uav_infos[i]['working_state'] = 4
-                        reward.append(1000)
+                        reward.append(20)
                         request_service = []
                     else:
                         self.uav_infos[i]['working_state'] = 2
-                        reward.append(-1000)
+                        reward.append(-100)
+                
+                a = 1
 
             elif self.pre_action[i][2] == 3:
                 done.append(False)
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
-                min_energy = d/self.max_energy_util
+
                 if actions[i][2]>=0:    #3->3
                     if d<10:
-                        reward.append(-3000)
+                        reward.append(-100)
                     else:
                         reward.append((pre_d-d)*100)
                     self.uav_infos[i]['working_state'] = 3
@@ -172,29 +181,29 @@ class Env(object):
                     if d<10:
                         self.uav_infos[i]['working_state'] = 2
                         if self.uav_infos[i]['energy']>10:
-                            reward.append((10-self.uav_infos[i]['energy'])*100)
+                            reward.append((10-self.uav_infos[i]['energy'])*10)
                         else:
-                            reward.append(3000)
+                            reward.append(100)
                         self.uav_infos[i]['energy'] = 1000
                     else:
-                        reward.append(-3000)
+                        reward.append(-100)
                         self.uav_infos[i]['working_state'] = 3
 
             elif self.pre_action[i][2] == 4:
                 done.append(False)
-                pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])**2+(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])**2)
+                pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])**2)
                 self.uav_new_position(actions, i)
-                d = np.sqrt((self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])**2+(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])**2)
+                d = np.sqrt((self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])**2)
                 if actions[i][2]>=0:    #4->4
                     reward.append((pre_d-d)*100)
                     self.uav_infos[i]['working_state'] = 4
                 else: #4->1
                     if d < 10:
-                        reward.append(10000)
+                        reward.append(100)
                         self.uav_infos[i]['working_state'] = 1
                         self.pre_ask_return.append(i)
                     else: 
-                        reward.append(-10000)
+                        reward.append(-100)
                         self.uav_infos[i]['working_state'] = 4
             elif self.pre_action[i][2] == 5:
                 done.append(False)
@@ -205,16 +214,16 @@ class Env(object):
                     self.uav_infos[i]['working_state'] = 5
                     request_service.append(i)
                     if len(self.pre_ask_return)>0:
-                        reward.append(-3000)
+                        reward.append(-100)
                     else:
                         reward.append((pre_d-d)*100)
                 else:   #5->3
                     if len(self.pre_ask_return)>0:
-                        reward.append(3000)
+                        reward.append(100)
                         self.uav_infos[i]['working_state'] = 3
                         self.pre_ask_return = []
                     else:
-                        reward.append(-3000)
+                        reward.append(-100)
                         request_service.append(i)
                         self.uav_infos[i]['working_state'] = 5
             
