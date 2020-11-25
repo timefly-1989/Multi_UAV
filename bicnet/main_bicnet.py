@@ -41,7 +41,12 @@ def train(args):
             bicnet.memory(state, action, reward, next_state, done)
             state = next_state
             accum_reward = sum(reward)+accum_reward
+
             if args.episode_length < step or (True in done):
+                if accum_reward > 100 and (not(True in done)):
+                    env.uav_store.append(env.uav_infos)
+                    env.charging_store.append(env.charging_infos)
+                    env.goal_stroe.append(env.user_goal_infos)
                 c_loss, a_loss = bicnet.update(episode)
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
                 f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward)+"\n")

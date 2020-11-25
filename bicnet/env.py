@@ -23,6 +23,9 @@ class Env(object):
     goal_acceleration_y_bound = [-0.1, 0.1]
     goal_speed_x_bound = [-0.2, 0.2]
     goal_speed_y_bound = [-0.2, 0.2]
+    uav_store = []
+    charging_store = []
+    goal_stroe = []
 
     #wireless_working = 1    #正在为地面提供网络服务的UAV
     #standby_charge = 2      #在充电桩待机的UAV
@@ -38,9 +41,9 @@ class Env(object):
         self.wireless_working_num = wireless_working_num
         self.out_of_power = -1000
         self.max_energy_util = 0.001
-    
+
     def obslist_i(self, i):
-        return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],(self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])/100,(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])/100,(self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])/100,(self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])/100,self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']/100])
+        return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],(self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])/100,(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])/100,(self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])/100,(self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])/100,self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']/200])
 
     def reset(self):
         obslist = []
@@ -51,32 +54,37 @@ class Env(object):
         self.pre_request_service = []
         self.pre_ask_return = []
 
-        for u in range(np.size(self.uav_infos)):
-            if u < self.wireless_working_num:
-                self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
-                self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
-                self.uav_infos[uav_sequence[u]]['acceleration_x'] = 0.
-                self.uav_infos[uav_sequence[u]]['acceleration_y'] = 0.
-                self.uav_infos[uav_sequence[u]]['position_x'] = np.random.uniform(0, self.region_x)
-                self.uav_infos[uav_sequence[u]]['position_y'] = np.random.uniform(0, self.region_y)
-                self.uav_infos[uav_sequence[u]]['working_state'] = 1
-                self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(200,600)
-            else:
-                self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
-                self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
-                self.uav_infos[uav_sequence[u]]['acceleration_x'] = 0.
-                self.uav_infos[uav_sequence[u]]['acceleration_y'] = 0.
-                self.uav_infos[uav_sequence[u]]['position_x'] = self.charging_infos[id_c]['position_x'] = np.random.uniform(0, self.region_x)
-                self.uav_infos[uav_sequence[u]]['position_y'] = self.charging_infos[id_c]['position_y'] = np.random.uniform(0, self.region_y)
-                self.uav_infos[uav_sequence[u]]['working_state'] = 2
-                self.uav_infos[uav_sequence[u]]['energy'] = 1000
-                id_c = id_c +1
-
-        for g in self.user_goal_infos:
-            g['speed_x'] = 0.
-            g['speed_y'] = 0.
-            g['position_x'] = np.random.uniform(0, self.region_x)
-            g['position_y'] = np.random.uniform(0, self.region_y)
+        if random.randint(0,9)<=5 and len(self.uav_store)>200:
+            sample_num = random.randint(0,len(self.uav_store)-1)
+            self.uav_infos = self.uav_store[sample_num]
+            self.charging_infos = self.charging_store[sample_num]
+            self.user_goal_infos = self.goal_stroe[sample_num]
+        else:
+            for u in range(np.size(self.uav_infos)):
+                if u < self.wireless_working_num:
+                    self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
+                    self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
+                    self.uav_infos[uav_sequence[u]]['acceleration_x'] = 0.
+                    self.uav_infos[uav_sequence[u]]['acceleration_y'] = 0.
+                    self.uav_infos[uav_sequence[u]]['position_x'] = np.random.uniform(0, self.region_x)
+                    self.uav_infos[uav_sequence[u]]['position_y'] = np.random.uniform(0, self.region_y)
+                    self.uav_infos[uav_sequence[u]]['working_state'] = 1
+                    self.uav_infos[uav_sequence[u]]['energy'] = np.random.uniform(800,1000)
+                else:
+                    self.uav_infos[uav_sequence[u]]['speed_x'] = 0.
+                    self.uav_infos[uav_sequence[u]]['speed_y'] = 0.
+                    self.uav_infos[uav_sequence[u]]['acceleration_x'] = 0.
+                    self.uav_infos[uav_sequence[u]]['acceleration_y'] = 0.
+                    self.uav_infos[uav_sequence[u]]['position_x'] = self.charging_infos[id_c]['position_x'] = np.random.uniform(0, self.region_x)
+                    self.uav_infos[uav_sequence[u]]['position_y'] = self.charging_infos[id_c]['position_y'] = np.random.uniform(0, self.region_y)
+                    self.uav_infos[uav_sequence[u]]['working_state'] = 2
+                    self.uav_infos[uav_sequence[u]]['energy'] = 1000
+                    id_c = id_c +1
+            for g in self.user_goal_infos:
+                g['speed_x'] = 0.
+                g['speed_y'] = 0.
+                g['position_x'] = np.random.uniform(0, self.region_x)
+                g['position_y'] = np.random.uniform(0, self.region_y)
 
         for i in range(np.size(self.uav_infos)):
             obslist.append(self.obslist_i(i))
