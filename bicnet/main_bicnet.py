@@ -1,11 +1,16 @@
 import sys
 from env import Env
 import numpy as np
-import torch
 from bicnet import BiCNet
 import argparse, datetime
+import torch
+import os
 
 def train(args):
+    if not os.path.exists("./reward/"):
+        os.mkdir("./reward/")
+    f = open('./reward/reward.txt','w')
+
     uav_num_working = 1
     charging_num = 1
     uav_num_waiting = charging_num
@@ -39,6 +44,7 @@ def train(args):
             if args.episode_length < step or (True in done):
                 c_loss, a_loss = bicnet.update(episode)
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
+                f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward))
                 if c_loss and a_loss:
                     print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
                 if episode % args.save_interval == 0:
