@@ -40,7 +40,7 @@ class Env(object):
         self.max_energy_util = 0.001
     
     def obslist_i(self, i):
-        return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],self.uav_infos[i]['position_x'],self.uav_infos[i]['position_y'],self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'],self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'],self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'],self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'],self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']])
+        return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],(self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])/100,(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])/100,(self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])/100,(self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])/100,self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']/100])
 
     def reset(self):
         obslist = []

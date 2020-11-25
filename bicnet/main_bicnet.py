@@ -44,7 +44,7 @@ def train(args):
             if args.episode_length < step or (True in done):
                 c_loss, a_loss = bicnet.update(episode)
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
-                f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward))
+                f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward)+"\n")
                 if c_loss and a_loss:
                     print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
                 if episode % args.save_interval == 0:
