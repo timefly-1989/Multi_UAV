@@ -129,12 +129,12 @@ class Env(object):
                         if min_energy+20<self.uav_infos[i]['energy']:
                             reward.append((pre_d-d)*100)
                         else:
-                            reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*100)
+                            reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*10)
                     else:
                         reward.append((pre_d-d)+(self.uav_infos[i]['energy']-min_energy)*5)
                     self.uav_infos[i]['working_state'] = 1
                 else:   #1->5
-                    if min_energy+200<self.uav_infos[i]['energy']:
+                    if min_energy+80<self.uav_infos[i]['energy']:
                         reward.append(-100)
                         self.uav_infos[i]['working_state'] = 1
                     else:
@@ -151,19 +151,17 @@ class Env(object):
                 if actions[i][2]>=0:    #2->2
                     self.uav_infos[i]['working_state'] = 2
                     if len(self.pre_request_service)>0:
-                        reward.append(-20)
+                        reward.append(-50)
                     else:
-                        reward.append(20)
+                        reward.append(50)
                 else:   #2->4
                     if len(self.pre_request_service)>0:
                         self.uav_infos[i]['working_state'] = 4
-                        reward.append(20)
+                        reward.append(50)
                         request_service = []
                     else:
                         self.uav_infos[i]['working_state'] = 2
                         reward.append(-100)
-                
-                a = 1
 
             elif self.pre_action[i][2] == 3:
                 done.append(False)
@@ -205,6 +203,7 @@ class Env(object):
                     else: 
                         reward.append(-100)
                         self.uav_infos[i]['working_state'] = 4
+
             elif self.pre_action[i][2] == 5:
                 done.append(False)
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2)
