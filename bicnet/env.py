@@ -26,6 +26,7 @@ class Env(object):
     uav_store = []
     charging_store = []
     goal_stroe = []
+    stroe_available = 1
 
     #wireless_working = 1    #正在为地面提供网络服务的UAV
     #standby_charge = 2      #在充电桩待机的UAV
@@ -93,6 +94,8 @@ class Env(object):
 
     def step(self, actions):
         self.goal_new_state()
+        goal_x = self.user_goal_infos[0]['position_x']
+        goal_y = self.user_goal_infos[0]['position_y']
         game_over = 0
         done = []
         reward = []
@@ -100,8 +103,17 @@ class Env(object):
         next_actions = []
         request_service = []
         actions = actions.reshape((int(actions.size/3), 3))
+        self.stroe_available = 1
+        pre_d_uav_goal = []
+        d_uav_goal = []
+        pre_d_uav_charging = []
+        d_uav_charging = []
 
-        for i in range(np.size(self.uav_infos)):
+        for i in range(len(actions)):
+            pre_d_uav_goal.append(np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2))
+            pre_d_uav_charging.append(np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2 + (self.uav_infos[i]['position_y'] -self.charging_infos[0]['position_y'])**2))
+
+            #计算能量消耗
             if self.uav_infos[i]['working_state'] == 1 or 3 or 4 or 5:
                 v = np.sqrt(self.uav_infos[i]['speed_x']**2+self.uav_infos[i]['speed_y']**2)
                 energy_c = energy.energy_consumption(v)
@@ -110,11 +122,11 @@ class Env(object):
                 if e>self.max_energy_util:
                     self.max_energy_util = e
 
-        #能量耗尽，system崩溃结束。
-        for i in range(len(actions)):
+            #能量耗尽，system崩溃结束。
             if self.uav_infos[i]['energy']<=0:
                 game_over = 1
                 break 
+        
         if game_over == 1:
             for i in range(np.size(self.uav_infos)):
                 obslist.append(self.obslist_i(i))
@@ -122,40 +134,44 @@ class Env(object):
                 done.append(True)
             return obslist, reward, done
         
-        goal_x = self.user_goal_infos[0]['position_x']
-        goal_y = self.user_goal_infos[0]['position_y']
-        for i in range (len(actions)):
+        #计算新状态位置
+        for i in range(len(actions)):
+            self.uav_new_position(actions, i)
+        for i in range(len(actions)):
+            d_uav_goal.append(np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2))
+            d_uav_charging.append(np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2 + (self.uav_infos[i]['position_y'] -self.charging_infos[0]['position_y'])**2))
+
+        for i in range(len(actions)):
+            done.append(False)
             if self.pre_action[i][2] == 1:
-                pre_d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2)
-                self.uav_new_position(actions, i)
-                d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2 + (self.uav_infos[i]['position_y'] -goal_y)**2)
-                d_charging = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2 + (self.uav_infos[i]['position_y'] -self.charging_infos[0]['position_y'])**2)
-                min_energy = 2*d_charging/self.max_energy_util
-                done.append(False)
+                min_energy = (d_uav_charging[i]+d_uav_goal[int(abs(i-1))])/self.max_energy_util
                 if actions[i][2]>=0:    #1->1
                     if min_energy<self.uav_infos[i]['energy']:
                         if min_energy+20<self.uav_infos[i]['energy']:
-                            reward.append((pre_d-d)*100)
+                            reward.append((pre_d_uav_goal[i]-d_uav_goal[i])*100)
                         else:
-                            reward.append((pre_d-d)*10+(self.uav_infos[i]['energy']-20-min_energy)*10)
+                            reward.append(0)
                     else:
-                        reward.append((pre_d-d)+(self.uav_infos[i]['energy']-min_energy)*5)
+                        reward.append((pre_d_uav_goal[i]-d_uav_goal[i])+(self.uav_infos[i]['energy']-min_energy)*20)
+                        self.stroe_available = 0
                     self.uav_infos[i]['working_state'] = 1
                 else:   #1->5
                     if min_energy+80<self.uav_infos[i]['energy']:
                         reward.append(-100)
                         self.uav_infos[i]['working_state'] = 1
                     else:
-                        if min_energy+40<self.uav_infos[i]['energy']:
-                            reward.append((pre_d-d)*10-0.1*(self.uav_infos[i]['energy']-40-min_energy))
+                        if min_energy+20<self.uav_infos[i]['energy']:
+                            reward.append(0)
                         else:
-                            reward.append((pre_d-d)*10-(self.uav_infos[i]['energy']-40-min_energy))
+                            reward.append((pre_d_uav_goal[i]-d_uav_goal[i])-10*(self.uav_infos[i]['energy']-20-min_energy))
                         self.uav_infos[i]['working_state'] = 5
                         request_service.append(i)
+                    if min_energy>self.uav_infos[i]['energy']:
+                        self.stroe_available = 0
                 
             elif self.pre_action[i][2] == 2:
                 self.uav_new_position(actions, i)
-                done.append(False)
+                
                 if actions[i][2]>=0:    #2->2
                     self.uav_infos[i]['working_state'] = 2
                     if len(self.pre_request_service)>0:
@@ -172,19 +188,19 @@ class Env(object):
                         reward.append(-100)
 
             elif self.pre_action[i][2] == 3:
-                done.append(False)
+                
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])**2)
 
                 if actions[i][2]>=0:    #3->3
-                    if d<10:
-                        reward.append(-100)
+                    if d<20:
+                        reward.append(-50)
                     else:
                         reward.append((pre_d-d)*100)
                     self.uav_infos[i]['working_state'] = 3
                 else:   #3->2
-                    if d<10:
+                    if d<20:
                         self.uav_infos[i]['working_state'] = 2
                         if self.uav_infos[i]['energy']>10:
                             reward.append((10-self.uav_infos[i]['energy'])*10)
@@ -196,7 +212,7 @@ class Env(object):
                         self.uav_infos[i]['working_state'] = 3
 
             elif self.pre_action[i][2] == 4:
-                done.append(False)
+                
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])**2+(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])**2)
@@ -204,7 +220,7 @@ class Env(object):
                     reward.append((pre_d-d)*100)
                     self.uav_infos[i]['working_state'] = 4
                 else: #4->1
-                    if d < 10:
+                    if d < 20:
                         reward.append(100)
                         self.uav_infos[i]['working_state'] = 1
                         self.pre_ask_return.append(i)
@@ -213,7 +229,7 @@ class Env(object):
                         self.uav_infos[i]['working_state'] = 4
 
             elif self.pre_action[i][2] == 5:
-                done.append(False)
+
                 pre_d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2+(self.uav_infos[i]['position_y']-goal_y)**2)
                 self.uav_new_position(actions, i)
                 d = np.sqrt((self.uav_infos[i]['position_x']-goal_x)**2 + (self.uav_infos[i]['position_y'] -goal_y)**2)
@@ -310,17 +326,6 @@ class Env(object):
             self.uav_infos[i]['speed_y'] = uav_speed_y_
             self.uav_infos[i]['position_x'] = uav_position_x_
             self.uav_infos[i]['position_y'] = uav_position_y_
-
-
-    def state_transfer_failed(self):
-        done = []
-        reward = []
-        obslist = []
-        done.append(True)
-        reward.append(self.state_transfer_failed_reward)
-        obslist.append(np.array([self.uav_infos[i]['speed_x'], self.uav_infos[i]['speed_y'], self.uav_infos[i]['acceleration_x'], self.uav_infos[i]['acceleration_y'], self.uav_infos[i]['position_x'], self.uav_infos[i]['position_y'], self.uav_infos[i]['working_state'], self.uav_infos[i]['energy']]))
-        return done, reward, obslist
-
 
     def render(self):
         if self.viewer is None:

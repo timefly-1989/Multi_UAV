@@ -43,7 +43,7 @@ def train(args):
             accum_reward = sum(reward)+accum_reward
 
             if args.episode_length < step or (True in done):
-                if accum_reward > 100 and (not(True in done)):
+                if env.stroe_available and (not(True in done)):
                     env.uav_store.append(env.uav_infos)
                     env.charging_store.append(env.charging_infos)
                     env.goal_stroe.append(env.user_goal_infos)
