@@ -11,6 +11,10 @@ def train(args):
         os.mkdir("./reward/")
     f = open('./reward/reward.txt','w')
 
+    if not os.path.exists("./state/"):
+        os.mkdir("./state/")
+    fs = open('./state/state.txt','w')
+
     uav_num_working = 1
     charging_num = 1
     uav_num_waiting = charging_num
@@ -33,7 +37,7 @@ def train(args):
         accum_reward = 0
         while True:
             action = bicnet.choose_action(state, noisy=True)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.step(action)  
             env.render()
             step += 1
             total_step += 1
@@ -43,13 +47,10 @@ def train(args):
             accum_reward = sum(reward)+accum_reward
 
             if args.episode_length < step or (True in done):
-                if env.stroe_available and (not(True in done)):
-                    env.uav_store.append(env.uav_infos)
-                    env.charging_store.append(env.charging_infos)
-                    env.goal_stroe.append(env.user_goal_infos)
                 c_loss, a_loss = bicnet.update(episode)
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
                 f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward)+"\n")
+                fs.write(str(env.run_d)+"\n")
                 if c_loss and a_loss:
                     print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
                 if episode % args.save_interval == 0:
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--episode_length', default=400, type=int)
     parser.add_argument('--memory_length', default=int(1e5), type=int)
     parser.add_argument('--tau', default=0.001, type=float)
-    parser.add_argument('--gamma', default=0.95, type=float)
+    parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--seed', default=777, type=int)
     parser.add_argument('--a_lr', default=0.0001, type=float)
     parser.add_argument('--c_lr', default=0.0001, type=float)
