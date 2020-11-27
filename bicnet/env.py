@@ -34,6 +34,7 @@ class Env(object):
         self.out_of_power = -5000
         self.max_energy_util = 0.001
         self.run_d = [0,0]
+        self.run_e = [0,0]
 
     def obslist_i(self, i):
         return np.array([self.uav_infos[i]['acceleration_x'],self.uav_infos[i]['acceleration_y'],self.uav_infos[i]['speed_x'],self.uav_infos[i]['speed_y'],(self.uav_infos[i]['position_x']-self.uav_infos[int(abs(i-1))]['position_x'])/100,(self.uav_infos[i]['position_y']-self.uav_infos[int(abs(i-1))]['position_y'])/100,(self.uav_infos[i]['position_x']-self.user_goal_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.user_goal_infos[0]['position_y'])/100,(self.uav_infos[i]['position_x']-self.charging_infos[0]['position_x'])/100,(self.uav_infos[i]['position_y']-self.charging_infos[0]['position_y'])/100,self.uav_infos[i]['working_state'],self.uav_infos[i]['energy']/200])
@@ -48,6 +49,7 @@ class Env(object):
         self.pre_ask_return = []
         self.stroe_available = 1
         self.run_d = [0,0]
+        self.run_e = [0,0]
 
         for u in range(np.size(self.uav_infos)):
             if u < self.wireless_working_num:
@@ -105,6 +107,7 @@ class Env(object):
                 v = np.sqrt(self.uav_infos[i]['speed_x']**2+self.uav_infos[i]['speed_y']**2)
                 energy_c = energy.energy_consumption(v)
                 self.uav_infos[i]['energy'] = self.uav_infos[i]['energy'] - energy_c
+                self.run_e[i] = self.run_e[i]+energy_c
                 e = energy.energy_distance_estimation(v, self.dt, energy_c)
                 if e>self.max_energy_util:
                     self.max_energy_util = e
