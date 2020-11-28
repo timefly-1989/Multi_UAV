@@ -53,6 +53,10 @@ def train(args):
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
                 f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward)+"\n")
                 fs.write(str(env.run_d)+str(env.run_e)+"\n")
+                for ee in range(len(env.run_d)):
+                    e = env.run_d[ee]/env.run_e[ee]
+                    if env.max_energy_util<e:
+                        env.max_energy_util = e
                 if c_loss and a_loss:
                     print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
                 if episode % args.save_interval == 0:

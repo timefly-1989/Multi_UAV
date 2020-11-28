@@ -32,7 +32,7 @@ class Env(object):
         self.user_goal_infos = np.zeros(user_goal_num, dtype=[('speed_x', np.float32), ('speed_y', np.float32), ('position_x', np.float32), ('position_y', np.float32)])
         self.wireless_working_num = wireless_working_num
         self.out_of_power = -5000
-        self.max_energy_util = 0.001
+        self.max_energy_util = 0.01
         
         self.uav_store = []
         self.charging_store = []
@@ -56,7 +56,7 @@ class Env(object):
         self.run_d = [0,0]
         self.run_e = [0,0]
 
-        if random.randint(0,9)>9 and len(self.uav_store)>0:
+        if random.randint(0,9)>1 and len(self.uav_store)>0:
             sample_num = random.randint(0,len(self.uav_store)-1)
             for u in range(np.size(self.uav_infos)):
                 self.uav_infos[u]['speed_x'] = self.uav_store[sample_num][u]['speed_x']
@@ -144,9 +144,6 @@ class Env(object):
                 energy_c = energy.energy_consumption(v)
                 self.uav_infos[i]['energy'] = self.uav_infos[i]['energy'] - energy_c
                 self.run_e[i] = self.run_e[i]+energy_c
-                e = energy.energy_distance_estimation(v, self.dt, energy_c)
-                if e>self.max_energy_util:
-                    self.max_energy_util = e
 
             #能量耗尽，system崩溃结束。
             if self.uav_infos[i]['energy']<=0:
