@@ -37,7 +37,7 @@ def train(args):
         accum_reward = 0
         while True:
             action = bicnet.choose_action(state, noisy=True)
-            next_state, reward, done = env.step(action)  
+            next_state, reward, done = env.step(action) 
             env.render()
             step += 1
             total_step += 1
@@ -47,6 +47,8 @@ def train(args):
             accum_reward = sum(reward)+accum_reward
 
             if args.episode_length < step or (True in done):
+                if env.stroe_available and (not(True in done)):
+                    env.store_()
                 c_loss, a_loss = bicnet.update(episode)
                 print("[Episode %05d] reward %6.4f" % (episode, accum_reward))
                 f.write("[Episode %05d] reward %6.4f" % (episode, accum_reward)+"\n")
