@@ -30,6 +30,7 @@ def train(args):
     bicnet.load_model()
     episode = 0
     total_step = 0
+    energy_estimate_list = []
     while episode < args.max_episodes:
         state = env.reset()
         episode += 1
@@ -55,8 +56,10 @@ def train(args):
                 fs.write(str(env.run_d)+str(env.run_e)+"\n")
                 for ee in range(len(env.run_d)):
                     e = env.run_d[ee]/env.run_e[ee]
-                    if env.max_energy_util<e:
-                        env.max_energy_util = e
+                    energy_estimate_list.append(e)
+                energy_estimate_list.sort()
+                half = len(energy_estimate_list) // 2
+                env.max_energy_util = (energy_estimate_list[half] + energy_estimate_list[~half]) / 2
                 if c_loss and a_loss:
                     print(" a_loss %3.2f c_loss %3.2f" % (a_loss, c_loss), end='')
                 if episode % args.save_interval == 0:
